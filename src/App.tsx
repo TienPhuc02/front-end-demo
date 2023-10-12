@@ -2,6 +2,9 @@ import Header from "./components/Header";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import TabsBar from "./components/Tabs";
 import AdminPage from "./pages/Admin";
+import AdminDashBoard from "./components/Admin/DashBoard";
+import AdminAuthor from "./components/Admin/Author";
+import AdminBook from "./components/Admin/Book";
 
 const LayoutApp = () => {
   return (
@@ -24,6 +27,7 @@ const App = () => {
           <LayoutApp />
         </div>
       ),
+      errorElement: "404 Not Found",
     },
     {
       path: "/admin",
@@ -32,6 +36,21 @@ const App = () => {
           <AdminPage />
         </div>
       ),
+      children: [
+        {
+          path: "",
+          index: true,
+          element: <AdminDashBoard />,
+        },
+        {
+          path: "author",
+          element: <AdminAuthor />,
+        },
+        {
+          path: "book",
+          element: <AdminBook />,
+        },
+      ],
     },
   ];
   return (
