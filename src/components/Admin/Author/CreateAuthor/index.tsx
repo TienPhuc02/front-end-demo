@@ -1,9 +1,10 @@
 import { PlusOutlined } from "@ant-design/icons";
-import { Button, Form, Input, Modal } from "antd";
+import { Button, Form, Input, Modal, message, notification } from "antd";
 import Upload, { RcFile, UploadFile, UploadProps } from "antd/es/upload";
 import { FixedSizeList as List } from "react-window";
 import { useState, useRef } from "react";
 import AutoSizer from "react-virtualized-auto-sizer";
+import { callUploadAvatarImg } from "../../../../service/api";
 type FieldType = {
   nameAuthor?: string;
   address?: string;
@@ -27,21 +28,69 @@ const CreateAuthor = () => {
   const [previewImage, setPreviewImage] = useState("");
   const [previewTitle, setPreviewTitle] = useState("");
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [imageThumbnail, setImageThumbnail] = useState([]);
+  const [dataThumbnail, setDataThumbnail] = useState<
+    {
+      name: any;
+      uid: string;
+    }[]
+  >([]);
   const [totalBook, setTotalBook] = useState(0); // Số lượng sách
   const nameBookRefs = useRef<string[]>([]);
   const handleCancel = () => setPreviewOpen(false);
-  const handlePreview = async (file: UploadFile) => {
+  const handlePreview = async (file) => {
+    console.log("🚀 ~ file: index.tsx:37 ~ handlePreview ~ file:", file);
     if (!file.url && !file.preview) {
-      file.preview = await getBase64(file.originFileObj as RcFile);
+      file.preview = await getBase64(file.originFileObj);
     }
-
-    setPreviewImage(file.url || (file.preview as string));
+    setPreviewImage(file.url || file.preview);
     setPreviewOpen(true);
     setPreviewTitle(
-      file.name || file.url!.substring(file.url!.lastIndexOf("/") + 1)
+      file.name || file.url.substring(file.url.lastIndexOf("/") + 1)
     );
   };
-
+  const beforeUpload = (file: RcFile) => {
+    console.log("🚀 ~ file: index.tsx:48 ~ beforeUpload ~ file:", file);
+    const isJpgOrPng = file.type === "image/jpeg" || file.type === "image/png";
+    if (!isJpgOrPng) {
+      message.error("You can only upload JPG/PNG file!");
+    }
+    const isLt2M = file.size / 1024 / 1024 < 2;
+    if (!isLt2M) {
+      message.error("Image must smaller than 2MB!");
+    }
+    return isJpgOrPng && isLt2M;
+  };
+  const handleUploadFileThumbnail = async (options: {
+    file: File;
+    onSuccess: (response: string) => void;
+    onError: (error: Error) => void;
+  }) => {
+    const { file, onSuccess, onError } = options;
+    if (file instanceof File) {
+      console.log(
+        "🚀 ~ file: index.tsx:57 ~ handleUploadFileThumbnail ~ file:",
+        file
+      );
+      const res = await callUploadAvatarImg(file);
+      console.log(
+        "🚀 ~ file: ModalCreateBook.jsx:85 ~ handleUploadFileThumbnail ~ res:",
+        res
+      );
+      if (res && res.data && res.data.data.file) {
+        setDataThumbnail({
+          name: res.data.data.file.filename,
+          uid: file.uid,
+        });
+        setImageThumbnail(file.name);
+        onSuccess("ok");
+      }
+    } else {
+      onError(new Error("Invalid file type"));
+    }
+  };
+  console.log(imageThumbnail);
+  console.log(dataThumbnail);
   const handleChange: UploadProps["onChange"] = ({ fileList: newFileList }) =>
     setFileList(newFileList);
 
@@ -53,22 +102,26 @@ const CreateAuthor = () => {
   );
   const onFinish = (values: FieldType) => {
     const nameBookValues = nameBookRefs.current;
-    console.log("Danh sách giá trị nameBook:", nameBookValues);
     console.log("Success:", {
       nameAuthor: values.nameAuthor,
       address: values.address,
       email: values.email,
-      avatar: values.avatar,
+      avatar: imageThumbnail,
       gender: values.gender,
       nation: values.nation,
       nameBook: nameBookValues,
       phone: values.phone,
       totalBook: values.totalBook,
     });
-    // Sử dụng nameBooks khi bạn cần gửi dữ liệu lên máy chủ hoặc thực hiện xử lý khác.
+    if (dataThumbnail && dataThumbnail.length === 0) {
+      notification.error({
+        message: "có lỗi xảy ra",
+        description: "vui lòng upload ảnh thumbnail",
+      });
+      return;
+    }
   };
-  const nameBookValues = nameBookRefs.current;
-  console.log("Danh sách giá trị nameBook:", nameBookValues);
+
   const onFinishFailed = (errorInfo: object) => {
     console.log("Failed:", errorInfo);
   };
@@ -156,10 +209,15 @@ const CreateAuthor = () => {
         </AutoSizer>
         <Form.Item name="avatar">
           <Upload
-            // action="https://run.mocky.io/v3/435e224c-44fb-4773-9faf-380c5e6a2188"
+            onPreview={handlePreview}
+            customRequest={handleUploadFileThumbnail}
+            maxCount={1}
+            multiple={false}
+            name="avatar"
             listType="picture-card"
             fileList={fileList}
             onPreview={handlePreview}
+            beforeUpload={beforeUpload}
             onChange={handleChange}
           >
             {fileList.length >= 8 ? null : uploadButton}
