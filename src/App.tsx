@@ -5,6 +5,7 @@ import AdminPage from "./pages/Admin";
 import AdminDashBoard from "./components/Admin/DashBoard";
 import AdminAuthor from "./components/Admin/Author";
 import AdminBook from "./components/Admin/Book";
+import CreateAuthor from "./components/Admin/Author/CreateAuthor";
 
 const LayoutApp = () => {
   return (
@@ -49,6 +50,10 @@ const App = () => {
         {
           path: "book",
           element: <AdminBook />,
+        },
+        {
+          path: "author/create",
+          element: <CreateAuthor />,
         },
       ],
     },

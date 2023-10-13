@@ -3,6 +3,7 @@ import { ColumnsType, TableProps } from "antd/es/table";
 import React from "react";
 import { Table } from "antd";
 import { ExportOutlined, ImportOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 interface DataType {
   key: React.Key;
   name: string;
@@ -11,11 +12,12 @@ interface DataType {
   english: number;
 }
 const AdminAuthor = () => {
+  const navigate = useNavigate();
   const columns: ColumnsType<DataType> = [
     {
       title: "Name",
       dataIndex: "name",
-      fixed:true
+      fixed: true,
     },
     {
       title: "Chinese Score",
@@ -104,6 +106,7 @@ const AdminAuthor = () => {
         <Button
           className="bg-[#1677ff] mr-2 max-[768px]:text-[13px] max-[768px]:px-[0px] max-[640px]:text-[12px]"
           type="primary"
+          onClick={() => navigate("create")}
         >
           Create
         </Button>
