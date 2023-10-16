@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from "../utils/customize";
 
 export const callUploadAvatarImg = (fileImg: File) => {
   const bodyFormData = new FormData();
@@ -15,4 +15,6 @@ export const callUploadAvatarImg = (fileImg: File) => {
   });
 };
 
-// export const callCreateAuthor =
+export const callCreateAuthor = (data: object) => {
+  return axios.post("http://localhost:8083/api/v1/authors", data);
+};

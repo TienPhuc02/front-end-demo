@@ -4,7 +4,7 @@ import Upload, { RcFile, UploadFile, UploadProps } from "antd/es/upload";
 import { FixedSizeList as List } from "react-window";
 import { useState, useRef } from "react";
 import AutoSizer from "react-virtualized-auto-sizer";
-import { callUploadAvatarImg } from "../../../../service/api";
+import { callCreateAuthor, callUploadAvatarImg } from "../../../../service/api";
 type FieldType = {
   nameAuthor?: string;
   address?: string;
@@ -68,15 +68,7 @@ const CreateAuthor = () => {
   }) => {
     const { file, onSuccess, onError } = options;
     if (file instanceof File) {
-      console.log(
-        "🚀 ~ file: index.tsx:57 ~ handleUploadFileThumbnail ~ file:",
-        file
-      );
       const res = await callUploadAvatarImg(file);
-      console.log(
-        "🚀 ~ file: ModalCreateBook.jsx:85 ~ handleUploadFileThumbnail ~ res:",
-        res
-      );
       if (res && res.data && res.data.data.file) {
         setDataThumbnail({
           name: res.data.data.file.filename,
@@ -89,20 +81,17 @@ const CreateAuthor = () => {
       onError(new Error("Invalid file type"));
     }
   };
-  console.log(imageThumbnail);
-  console.log(dataThumbnail);
   const handleChange: UploadProps["onChange"] = ({ fileList: newFileList }) =>
     setFileList(newFileList);
-
   const uploadButton = (
     <div className="max-[640px]:text-[10px]  max-[640px]:w-[50px] ">
       <PlusOutlined />
       <div>Upload</div>
     </div>
   );
-  const onFinish = (values: FieldType) => {
+  const onFinish = async  (values: FieldType) => {
     const nameBookValues = nameBookRefs.current;
-    console.log("Success:", {
+    const dataCreateAuthor = {
       nameAuthor: values.nameAuthor,
       address: values.address,
       email: values.email,
@@ -112,7 +101,7 @@ const CreateAuthor = () => {
       nameBook: nameBookValues,
       phone: values.phone,
       totalBook: values.totalBook,
-    });
+    };
     if (dataThumbnail && dataThumbnail.length === 0) {
       notification.error({
         message: "có lỗi xảy ra",
@@ -120,6 +109,8 @@ const CreateAuthor = () => {
       });
       return;
     }
+    const res = await callCreateAuthor(dataCreateAuthor);
+    console.log(res)
   };
 
   const onFinishFailed = (errorInfo: object) => {
