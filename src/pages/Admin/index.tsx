@@ -37,6 +37,7 @@ const items: MenuItem[] = [
 
 const AdminPage: React.FC = () => {
   const [collapsed, setCollapsed] = useState(window.innerWidth < 640);
+  
   const handleCollapse = () => {
     if (window.innerWidth < 640) {
       setCollapsed(true);

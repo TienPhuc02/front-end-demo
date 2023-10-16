@@ -1,10 +1,19 @@
 import { PlusOutlined } from "@ant-design/icons";
-import { Button, Form, Input, Modal, message, notification } from "antd";
+import {
+  Button,
+  Form,
+  FormInstance,
+  Input,
+  Modal,
+  message,
+  notification,
+} from "antd";
 import Upload, { RcFile, UploadFile, UploadProps } from "antd/es/upload";
 import { FixedSizeList as List } from "react-window";
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { callCreateAuthor, callUploadAvatarImg } from "../../../../service/api";
+import ModalAfterCreate from "../../../ModalAfterCreate";
 type FieldType = {
   nameAuthor?: string;
   address?: string;
@@ -16,6 +25,11 @@ type FieldType = {
   totalBook: number;
   nameBook: string;
 };
+type handleUploadFileThumbnailOptions = {
+  file: UploadFile;
+  onSuccess: (response: string) => void;
+  onError: (error: Error) => void;
+};
 const getBase64 = (file: RcFile): Promise<string> =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -23,31 +37,63 @@ const getBase64 = (file: RcFile): Promise<string> =>
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = (error) => reject(error);
   });
-const CreateAuthor = () => {
+const CreateAuthor: React.FC = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewImage, setPreviewImage] = useState("");
-  const [previewTitle, setPreviewTitle] = useState("");
+  const formRef = React.useRef<FormInstance>(null);
+  const [previewImage, setPreviewImage] = useState<string | undefined>("");
+  const [previewTitle, setPreviewTitle] = useState<string | undefined>("");
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [imageThumbnail, setImageThumbnail] = useState([]);
+  const [imageThumbnail, setImageThumbnail] = useState<string[]>([]);
   const [dataThumbnail, setDataThumbnail] = useState<
     {
-      name: any;
+      name: string;
       uid: string;
     }[]
   >([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const [totalBook, setTotalBook] = useState(0); // Số lượng sách
   const nameBookRefs = useRef<string[]>([]);
+  const showModalAfterCreate = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleOkAfterCreate = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleCancelAfterCreate = () => {
+    setIsModalOpen(false);
+  };
   const handleCancel = () => setPreviewOpen(false);
-  const handlePreview = async (file) => {
+  const handlePreview = async (file: UploadFile) => {
     console.log("🚀 ~ file: index.tsx:37 ~ handlePreview ~ file:", file);
-    if (!file.url && !file.preview) {
-      file.preview = await getBase64(file.originFileObj);
+    if (file.originFileObj) {
+      if (!file.thumbUrl && !file.preview) {
+        file.preview = await getBase64(file.originFileObj);
+      }
     }
-    setPreviewImage(file.url || file.preview);
+    setPreviewImage(file.thumbUrl || file.preview);
     setPreviewOpen(true);
     setPreviewTitle(
-      file.name || file.url.substring(file.url.lastIndexOf("/") + 1)
+      file.name ||
+        (file.thumbUrl
+          ? file.thumbUrl.substring(file.thumbUrl.lastIndexOf("/") + 1)
+          : "")
     );
+  };
+  const onFill = () => {
+    formRef.current?.setFieldsValue({
+      nameAuthor: "nameAuthor",
+      address: "address",
+      email: "email",
+      avatar: "avatar",
+      gender: "gender",
+      nation: "nation",
+      nameBook: ["book", "book1", "book2"],
+      phone: 123456789,
+      totalBook: 3,
+    });
   };
   const beforeUpload = (file: RcFile) => {
     console.log("🚀 ~ file: index.tsx:48 ~ beforeUpload ~ file:", file);
@@ -61,20 +107,22 @@ const CreateAuthor = () => {
     }
     return isJpgOrPng && isLt2M;
   };
-  const handleUploadFileThumbnail = async (options: {
-    file: File;
-    onSuccess: (response: string) => void;
-    onError: (error: Error) => void;
-  }) => {
+  const handleUploadFileThumbnail = async (
+    options: handleUploadFileThumbnailOptions
+  ) => {
     const { file, onSuccess, onError } = options;
     if (file instanceof File) {
+      console.log("🚀 ~ file: index.tsx:112 ~ file:", file);
       const res = await callUploadAvatarImg(file);
       if (res && res.data && res.data.data.file) {
-        setDataThumbnail({
-          name: res.data.data.file.filename,
-          uid: file.uid,
-        });
-        setImageThumbnail(file.name);
+        setDataThumbnail([
+          ...dataThumbnail,
+          {
+            name: res.data.data.file.filename,
+            uid: file.uid,
+          },
+        ]);
+        setImageThumbnail([...imageThumbnail, file.name]);
         onSuccess("ok");
       }
     } else {
@@ -89,7 +137,7 @@ const CreateAuthor = () => {
       <div>Upload</div>
     </div>
   );
-  const onFinish = async  (values: FieldType) => {
+  const onFinish = async (values: FieldType) => {
     const nameBookValues = nameBookRefs.current;
     const dataCreateAuthor = {
       nameAuthor: values.nameAuthor,
@@ -110,15 +158,24 @@ const CreateAuthor = () => {
       return;
     }
     const res = await callCreateAuthor(dataCreateAuthor);
-    console.log(res)
+    console.log(res);
+    if (res && res.data) {
+      message.success("Create Author Success");
+      showModalAfterCreate();
+    }
   };
 
   const onFinishFailed = (errorInfo: object) => {
     console.log("Failed:", errorInfo);
   };
+  const onReset = () => {
+    formRef.current?.resetFields();
+  };
+  console.log("🚀 ~ file: index.tsx:43 ~ dataThumbnail:", dataThumbnail);
   return (
     <Form
       name="dataAuthor"
+      ref={formRef}
       onFinishFailed={onFinishFailed}
       autoComplete="off"
       onFinish={onFinish}
@@ -201,13 +258,12 @@ const CreateAuthor = () => {
         <Form.Item name="avatar">
           <Upload
             onPreview={handlePreview}
-            customRequest={handleUploadFileThumbnail}
+            customRequest={handleUploadFileThumbnail as UploadProps['customRequest']}
             maxCount={1}
             multiple={false}
             name="avatar"
             listType="picture-card"
             fileList={fileList}
-            onPreview={handlePreview}
             beforeUpload={beforeUpload}
             onChange={handleChange}
           >
@@ -223,10 +279,23 @@ const CreateAuthor = () => {
           <img alt="example" style={{ width: "100%" }} src={previewImage} />
         </Modal>
       </div>
+      <div>
+        <ModalAfterCreate
+          isModalOpen={isModalOpen}
+          handleOkAfterCreate={handleOkAfterCreate}
+          handleCancelAfterCreate={handleCancelAfterCreate}
+        />
+      </div>
       <Form.Item>
-        <div className="">
+        <div className=" flex gap-1">
           <Button className="bg-[#1677ff] " type="primary" htmlType="submit">
             Submit
+          </Button>
+          <Button htmlType="button" onClick={onReset}>
+            Reset
+          </Button>
+          <Button type="link" htmlType="button" onClick={onFill}>
+            Fill form
           </Button>
         </div>
       </Form.Item>
